@@ -1,0 +1,103 @@
+---
+title: "WorkingWithDates"
+author: "Joyce Robbins"
+date: "10/11/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE)
+```
+
+# Coding
+
+**Use `Date` class**
+
+base R: `as.Date`
+
+
+```{r}
+library(tidyverse)
+```
+
+## Working with dates
+
+```{r}
+as.Date("2017-11-02") - as.Date("2017-01-01")
+as.Date("Thursday, January 6, 2005", format = "%A, %B %d, %Y")
+
+?strptime
+
+as.integer("2017-11-02")
+as.integer(as.Date("2017-11-02"))
+"2017-11-12" > "2017-3-3"
+as.Date("2017-11-12") > as.Date("2017-3-3")
+today <- Sys.Date()
+class(today)
+
+library(lubridate)
+year(today)
+quarters(today)
+months(today)
+weekdays(today)
+julian(today)
+as.integer(today)
+julian(today, origin = as.Date("2016-11-08"))
+```
+
+## lubridate (functions to replace `as.Date`)
+```{r}
+library(tidyverse)
+dmy("1/1/17") %>% class()
+```
+
+## using date scales in `ggplot2`
+```{r}
+df <- read_csv("mortgage.csv")
+head(df)
+tidydf <- gather(df, key, value, -DATE)
+head(tidydf)
+# default span = .75 (see ?loess for more details)
+ggplot(tidydf, aes(DATE, value, color = key)) + geom_smooth(span = 2) + geom_line()
+```
+
+## Controlling the x-axis
+
+```{r}
+ggplot(df, aes(DATE, `30 YR FIXED`)) + geom_line() +
+  geom_vline(xintercept = ymd("2008-09-29"), color = "blue")+
+  scale_x_date(breaks = ymd("2008-09-29")) + theme_grey(16)
+```
+
+##
+```{r}
+ggplot(df, aes(DATE, `30 YR FIXED`)) + geom_line() +
+  geom_vline(xintercept = ymd("2008-09-29"), color = "blue") +
+  scale_x_date(limits = c(ymd("2008-01-01"), ymd("2008-12-31"))) + theme_grey(16)
+```
+
+##
+```{r}
+ggplot(df, aes(DATE, `30 YR FIXED`)) + geom_line() +
+  geom_vline(xintercept = ymd("2008-09-29"), color = "blue") +
+  scale_x_date(limits = c(ymd("2008-01-01"), ymd("2009-12-31")), date_breaks = "1 year", 
+               date_labels = "%Y") + theme_grey(16)
+```
+
+##
+```{r}
+ggplot(df, aes(DATE, `30 YR FIXED`)) + geom_line() +
+  geom_vline(xintercept = ymd("2008-09-29"), color = "blue") +
+  scale_x_date(date_labels = "%b '%y") + theme_grey(16)
+```
+
+##
+```{r}
+ggplot(df, aes(DATE, `30 YR FIXED`)) + geom_line() +
+  geom_vline(xintercept = ymd("2008-09-29"), color = "blue") +
+  scale_x_date(date_breaks = "2 years", 
+               date_labels = "%b '%y") + theme_grey(16)
+```
+
+

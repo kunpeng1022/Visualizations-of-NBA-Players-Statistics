@@ -1,0 +1,471 @@
+---
+title: "Final Project"
+output: html_document
+---
+
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Introduction:
+
+Our team members are crazy NBA fans, and we are really interested in how NBA changes during last 30 years. In this project, we try to figure out the evolution of NBA players. The data main analysis contains two aspects: all the NBA players and top 30 NBA stars with most points. 
+Our team members: Zichen Pan, Kunpeng Liu.
+We work together on every part in this project, from collecting data to making interactive component. 
+
+
+##Data:
+We collected data from the website: www.basketball-reference.com. We downloaded all NBA players' statistics each year from 1985 to 2018 and combined these data sets into a single data set. The dataset we built contains each player's name, team, points, and other statistics related to their court performance. 
+
+##Data Quality:
+```{r}
+library(dplyr)
+df <- data.frame()
+for (i in 1985:2018){
+  i_char <- as.character(i)
+  file_path <- paste(i_char,".csv", sep = "")
+  Data <- read.csv(file = file_path)
+  Data['Year'] <- i
+  df=rbind(df,Data)
+}
+
+colSums(is.na(df)) %>%
+  sort(decreasing = TRUE)
+```
+
+```{r}
+library(extracat)
+visna(df, sort = "b")
+```
+
+<br>
+From the data quality analysis above, Most players' statistics are complete and the missing data concentrates in five specific variables. However, the proportion of missing is rather small so we can just drop the rows with missing data. 
+<br>
+
+##Data Manipulation:
+We used the code below to combine datasets for each year into a single dataframe, and we did little data cleaning, since there were duplicate data. Then for each year we chose all players and 30 players with most points, and regarded them as "stars" in that year. We believe that NBA stars could be another view representing changes of NBA over years. Note that, since 1999 and 2012 are not complete seasons, we drop the data in these two seasons. 
+
+####All Players:
+```{r}
+df_all<-data.frame()
+for (i in 1985:2018){
+    dftest<-subset(df,Year==i)
+    df_all=rbind(df_all,dftest)
+}
+df_hw<- read.csv("Players.csv")
+df_hw$Player=sub("\\*.*", "", df_hw$Player)
+df_hw$X <- NULL
+df_hw<-unique(df_hw)
+library(dplyr)
+df_all$Player=sub("\\\\.*", "", df_all$Player)
+df_all$Player=sub("\\*.*", "", df_all$Player)
+df_all<-merge(x = df_all, y = df_hw,by = "Player", all.x = TRUE)
+
+data_select <- df_all %>% select(Year, Player, Tm, G, Pos, FG., X3PA, X3P., X2PA, X2P., FTA, FT., ORB, DRB, TRB, AST, STL, BLK, PF, PTS, height, 
+                                         weight, collage, born, birth_city, birth_state)
+names(data_select) <- c("Year", "Player", "Team", "Games", "Position", "FG_Percent", "Three_Point_Attempt", "Three_Point_Percent", 
+                          "Two_Point_Attempt", "Two_Point_Percent", "FT_Attempt", "FT_Percent", "Offensive_Rebounds", "Defensive_Rebounds", "Total_Rebounds", 
+                          "Assist", "Steal", "Block", "Foul", "Points", "height", "weight", "college", "born", "birth_city", "birth_state")
+data_select$Year <- factor(data_select$Year)
+```
+
+
+####Star Players:
+
+```{r}
+df_star<-data.frame()
+for (i in 1985:1998){
+    dftest<-subset(df,Year==i)
+    dftest<-dftest[order(-dftest$PTS),]
+    dftest <- dftest[0:30,]
+    df_star=rbind(df_star,dftest)
+}
+for (i in 2000:2011){
+    dftest<-subset(df,Year==i)
+    dftest<-dftest[order(-dftest$PTS),]
+    dftest <- dftest[0:30,]
+    df_star=rbind(df_star,dftest)
+}
+for (i in 2013:2018){
+    dftest<-subset(df,Year==i)
+    dftest<-dftest[order(-dftest$PTS),]
+    dftest <- dftest[0:30,]
+    df_star=rbind(df_star,dftest)
+}
+df_hw<- read.csv("Players.csv")
+df_hw$Player=sub("\\*.*", "", df_hw$Player)
+df_hw$X <- NULL
+df_hw<-unique(df_hw)
+df_star$Player=sub("\\\\.*", "", df_star$Player)
+df_star$Player=sub("\\*.*", "", df_star$Player)
+df_star<-merge(x = df_star, y = df_hw,by = "Player", all.x = TRUE)
+df_star$Year=factor(df_star$Year)
+df_star[which(df_star$Pos == 'SG-PG'),]$Pos="SG"
+df_star[which(df_star$Pos == 'SG-PF'),]$Pos="SG"
+df_star[which(df_star$Pos == 'SF-SG'),]$Pos="SF"
+df_star[which(df_star$Pos == 'SG-SF'),]$Pos="SG"
+
+```
+
+
+##Main analysis:
+
+####Star Players:
+
+```{r,fig.width=15,fig.height=8}
+library(ggplot2)
+df_ave_PTS <- aggregate(df_star[, c("PTS")], list(df_star$Year), mean)
+colnames(df_ave_PTS) <- c("Year","Average_PTS")
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$PTS,alpha=0.5))+
+  geom_line(data=df_ave_PTS,aes(x=Year,y=Average_PTS, group=1,color="Average Points of All Stars",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)+labs(y="Points",x="Year")+ggtitle("NBA Stars'Total Points Per Year")+
+theme(plot.title = element_text(color="BLACK", size=20, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=15),
+axis.title.y = element_text(color="BLACK", size=15))
+```
+
+<br>
+The first thing we really want to know about NBA is "point". We use the scatter plot to show how points scored by NBA stars distribute each year from 1985 to 2017. Note that, each point in the graph represents a NBA player, and the red line represents how average points scored by NBA stars changes by year. There is no significant trend or huge difference among these years, and we could speculate that points a NBA star scores did not change too much during last 30 years. One interesting thing is that in 1987, there is an extreme high point in the graph, and you may know that it represents the greatest basketball player in the history, Michael Jordan.
+
+<br>
+
+
+```{r,fig.width=15,fig.height=8}
+library(reshape2)
+df_ave_3_attempt <- aggregate(df_star[, c("X3PA","X3P")], list(df_star$Year), mean)
+colnames(df_ave_3_attempt) <- c("Year","Average 3Point Attempt","Average 3Point made")
+df2 <- melt(df_ave_3_attempt, id.vars='Year')
+ggplot(df2, aes(x=Year, y=value, fill=variable)) +
+    geom_bar(stat='identity', position='dodge')+ggtitle("NBA Stars'Average 3 Point Attemt and Made")+
+theme(plot.title = element_text(color="BLACK", size=20, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=15),
+axis.title.y = element_text(color="BLACK", size=15))
+```
+
+<br>
+After knowing that number of points scored by NBA stars did not change too much in last 30 years, the next question is whether the way of scoring changes or not. Let's look at the bar chart about 3 point for NBA Stars. For each year, we calculate the average 3 point attempts and average 3 point made by NBA stars, and draw a bar chart by year. It is very clear that both average 3 point attempts and average 3 point made increase, and we could conclude that 3 point becomes much more important for modern NBA stars. 
+
+<br>
+
+```{r,fig.width=15,fig.height=8}
+df_center<-subset(df_star,Pos=="C")
+df_PG<-subset(df_star,Pos=="PG")
+df_PF<-subset(df_star,Pos=="PF")
+df_SF<-subset(df_star,Pos=="SF")
+df_SG<-subset(df_star,Pos=="SG")
+df_ave_X3PA_PG <- aggregate(df_PG[, c("X3PA")], list(df_PG$Year), mean)
+colnames(df_ave_X3PA_PG) <- c("Year","Average_X3PA")
+df_ave_X3PA_PF <- aggregate(df_PF[, c("X3PA")], list(df_PF$Year), mean)
+colnames(df_ave_X3PA_PF) <- c("Year","Average_X3PA")
+df_ave_X3PA_center <- aggregate(df_center[, c("X3PA")], list(df_center$Year), mean)
+colnames(df_ave_X3PA_center) <- c("Year","Average_X3PA")
+df_ave_X3PA_SF <- aggregate(df_SF[, c("X3PA")], list(df_SF$Year), mean)
+colnames(df_ave_X3PA_SF) <- c("Year","Average_X3PA")
+df_ave_X3PA_SG <- aggregate(df_SG[, c("X3PA")], list(df_SG$Year), mean)
+colnames(df_ave_X3PA_SG) <- c("Year","Average_X3PA")
+ggplot()+ geom_line(data=df_ave_X3PA_PG,aes(x=Year,y=Average_X3PA,group=1,color="PG",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)+
+  geom_line(data=df_ave_X3PA_center,aes(x=Year,y=Average_X3PA,group=1,color="C",size=1))+
+  geom_line(data=df_ave_X3PA_PF,aes(x=Year,y=Average_X3PA,group=1,color="PF",size=1))+
+  geom_line(data=df_ave_X3PA_SF,aes(x=Year,y=Average_X3PA,group=1,color="SF",size=1))+
+  geom_line(data=df_ave_X3PA_SG,aes(x=Year,y=Average_X3PA,group=1,color="SG",size=1))+ggtitle("NBA Different Positions Stars'Average 3 Point Attemt")+
+theme(plot.title = element_text(color="BLACK", size=20, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=15),
+axis.title.y = element_text(color="BLACK", size=15))+labs(y="Average 3 Points Attempt",x="Year")
+ggplot()+
+  geom_smooth(data=df_ave_X3PA_center,aes(x=Year,y=Average_X3PA, group=1,color="C"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_X3PA_PG,aes(x=Year,y=Average_X3PA, group=1,color="PG"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_X3PA_PF,aes(x=Year,y=Average_X3PA, group=1,color="PF"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_X3PA_SF,aes(x=Year,y=Average_X3PA, group=1,color="SF"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_X3PA_SG,aes(x=Year,y=Average_X3PA, group=1,color="SG"),method = "loess", se = FALSE, lwd =1.5)+ggtitle("NBA Different Positions Stars'Average 3 Point Attemt")+
+theme(plot.title = element_text(color="BLACK", size=18, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=14),
+axis.title.y = element_text(color="BLACK", size=14))+labs(y="Average 3 Points Attempt",x="Year")
+
+```
+
+<br>
+We are not only interest in how 3 point changes for all NBA stars, but also for specific positions. There are basically 5 different positions, or 5 different types of NBA players, namely Center, Power Forward, Small Forward, Shooting Guard and Point Guard. We draw a line chart to show for each position how average 3 point attempt changes by year. Basically, for every position, the number of average 3 point attempt increases. The most dramatic change about 3 point happens to center players, around 1985, center players did not make any 3 point attempt, but now they make nearly 200 3 point attempts each year. We could conclude that 3 point is more and more important for NBA stars, not limit to one specific position, but for all positions.
+
+<br>
+
+```{r,fig.width=15,fig.height=8}
+ggplot(data = df_star, aes(x = Year, fill = Pos)) + geom_bar()+ggtitle("Stacked Bar Chart of NBA Stars'Postions")+
+theme(plot.title = element_text(color="BLACK", size=18, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=15),
+axis.title.y = element_text(color="BLACK", size=15))+labs(y="Count",x="Year")
+```
+
+<br>
+We know that there are 5 different types of NBA players, and we want to know whether there is one type which is more important these days than before. We draw a stacked bar chart about NBA stars' positions, and try to figure out the change about the proportion of different positions by year. We notice that the proportion of Power Guard is higher now than 1985, and the proportion of Small Forward becomes lower after 2010. The proportion of center was very low around 2000, and it gets higher now. The proportion of Shooting Guard in NBA stars is always very high. We can conclude that Shooting Guard is always important in NBA basketball, and Point Guard becomes more important these days and Small Forward is not that important recently.
+
+<br>
+
+```{r,fig.width=15,fig.height=8}
+df_ave_min <- aggregate(df_star[, c("MP")], list(df_star$Year), mean)
+colnames(df_ave_min) <- c("Year","Average_mints")
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$MP/82, alpha=0.4))+
+  geom_smooth(data=df_ave_min,aes(x=Year,y=Average_mints/82, group=1,color="Average Minutes Playing Per Season  "),method = "loess", se = FALSE, lwd =1.5)+ggtitle("NBA Stars'Average Minutes Playing Per Game")+
+theme(plot.title = element_text(color="BLACK", size=18, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=14),
+axis.title.y = element_text(color="BLACK", size=14))+labs(y="Minutes",x="Year")
+```
+
+<br>
+This graph shows how number of minutes NBA stars playing changes by year. We can tell that NBA stars played more minutes each game around 2000, and now they plays fewer minutes each game. That might be due to that health of NBA stars are more emphasized these days, and they are protected more carefully.
+
+<br>
+
+```{r,fig.width=15,fig.height=8}
+df_ave_PF <- aggregate(df_star[, c("PF")], list(df_star$Year), mean)
+colnames(df_ave_PF) <- c("Year","Average_PF")
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$PF, alpha=0.4,color="Speicifc Player's total persoanl fouls"))+
+  geom_smooth(data=df_ave_PF,aes(x=Year,y=Average_PF, group=1,color="Player's Average Total Personal Fouls"),method = "loess", se = FALSE, lwd =1.5)+ggtitle("NBA Stars'Personal Fouls")+
+theme(plot.title = element_text(color="BLACK", size=18, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=14),
+axis.title.y = element_text(color="BLACK", size=14))+labs(y="Foul",x="Year")
+```
+
+<br>
+This graph shows how number of total personal fouls changes by year, the a blue point represents a NBA star, and the red line shows the trend of average number of personal fouls. It is very clear that the number of NBA stars' personal fouls decreases. The reason behind that might be that NBA games are simply not as aggressive as before, or that more shootings behind the 3 point line makes less likely for NBA stars to get fouled.
+
+<br>
+
+
+```{r,fig.width=15,fig.height=8}
+df_ave_FGA <- aggregate(df_star[, c("FGA")], list(df_star$Year), mean)
+colnames(df_ave_FGA) <- c("Year","Average_FGA")
+df_ave_X3PA <- aggregate(df_star[, c("X3PA")], list(df_star$Year), mean)
+colnames(df_ave_X3PA) <- c("Year","Average_X3PA")
+df_ave_X2PA <- aggregate(df_star[, c("X2PA")], list(df_star$Year), mean)
+colnames(df_ave_X2PA) <- c("Year","Average_X2PA")
+ggplot()+ geom_line(data=df_ave_FGA,aes(x=Year,y=Average_FGA,group=1,size=1,color="FGA"))+scale_size(range=c(0.5, 2), guide=FALSE)+
+  geom_line(data=df_ave_X3PA,aes(x=Year,y=Average_X3PA,group=1,size=1,color="X3PA"))+
+  geom_line(data=df_ave_X2PA,aes(x=Year,y=Average_X2PA,group=1,size=1,color="X2PA"))+ggtitle("NBA Stars'Average Field Goal Attempt/Average 2 Point Avttempt/3 Point Attempt")+
+theme(plot.title = element_text(color="BLACK", size=18, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=14),
+axis.title.y = element_text(color="BLACK", size=14))+labs(y="Attempt",x="Year")
+```
+
+<br>
+This graph combines what we find above about free throw and 3 point. It is very clear that NBA stars are shooting more 3 points and less free throws. This is very reasonable, since that more shooting behind 3 point line make player less likely to get fouled.
+
+<br>
+
+```{r,fig.width=10,fig.height=5}
+df_8595<-subset(df_star,as.numeric(as.character(Year))>1984 & as.numeric(as.character(Year))<1996)
+df_8595<-df_8595[,c("X3PA","X2PA","FTA","PF","TOV","TRB","AST","X3P.")]
+df_8595<-sapply(df_8595,FUN=mean)
+df_9505<-subset(df_star,as.numeric(as.character(Year))>1995 & as.numeric(as.character(Year))<2006)
+df_9505<-df_9505[,c("X3PA","X2PA","FTA","PF","TOV","TRB","AST","STL","X3P.")]
+df_9505<-sapply(df_9505,FUN=mean)
+df_0517<-subset(df_star,as.numeric(as.character(Year))>2005 & as.numeric(as.character(Year))<2018)
+df_0517<-df_0517[,c("X3PA","X2PA","FTA","PF","TOV","TRB","AST","X3P.")]
+df_0517<-sapply(df_0517,FUN=mean)
+names<-c("X3PA","X2PA","FTA")
+first<-c(111,1233/4,485/2)
+second<-c(232,1110/4,478/2)
+third<-c(273,997/4,454/2)
+df_all<- data.frame(names,first,second,third)
+coord_radar <- function (theta = "x", start = 0, direction = 1) {
+  theta <- match.arg(theta, c("x", "y"))
+  r <- if (theta == "x") "y" else "x"
+  ggproto("CordRadar", CoordPolar, theta = theta, r = r, start = start, 
+          direction = sign(direction),
+          is_linear = function(coord) TRUE)
+}
+names<-c("X3PA","FTA")
+first<-c(111,485/2)
+second<-c(232,478/2)
+third<-c(273,454/2)
+df_extraline<- data.frame(names,first,second,third)
+ggplot( ) +
+    geom_line(data=df_all,aes(x=names,y=first,group=1,color="1985-1995"))+
+    geom_line(data=df_all,aes(x=names,y=second,group=1,color="1996-2006"))+
+    geom_line(data=df_all,aes(x=names,y=third,group=1,color="2007-2018"))+coord_radar()+
+    geom_line(data=df_extraline,aes(x=names,y=first,group=1,color="1985-1995"))+
+    geom_line(data=df_extraline,aes(x=names,y=second,group=1,color="1996-2006"))+
+    geom_line(data=df_extraline,aes(x=names,y=third,group=1,color="2007-2018"))+ggtitle("Rader Chart Of NBA Stars In Different Time Periods")+
+theme(plot.title = element_text(color="BLACK", size=12, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=15),
+axis.title.y = element_text(color="BLACK", size=15),axis.ticks.y = element_blank(),
+        axis.text.y = element_blank())+labs(y="",x="")
+```
+
+<br>
+In order to better understand the evolution of NBA stars, we group NBA stars according to the year they played. There are 3 different groups: players who playing between 1985 to 1995, between 1996 to 2006 and between 2007 to 2018. We use radar charts to demonstrate differences of players in different time periods.
+
+In the first radar chart, we focus on different field goal attempts. We can tell that NBA stars playing between 1985 and 1995 used 2 point as the main scoring way. Scoring ways of NBA stars playing between 1996 and 2006 were more balanced, they shot 3 points but not that many. For the recent ten years, NBA stars more count on 3 point. As a consequence of these changes, the number of free throws decreases. 
+
+<br>
+
+```{r,fig.width=10,fig.height=5}
+names<-c("Turnover","Rebound","Assist","Steal")
+first<-c(217*10,532*4,319*7,107*16)
+second<-c(213*10,521*4,330*7,102*16)
+third<-c(189*10,486*4,334*7,93*16)
+df_all_se<- data.frame(names,first,second,third)
+names<-c("Turnover","Assist")
+first<-c(217*10,319*7)
+second<-c(213*10,330*7)
+third<-c(189*10,334*7)
+df_extraline_sec<- data.frame(names,first,second,third)
+ggplot( ) +
+    geom_line(data=df_all_se,aes(x=names,y=first,group=1,color="1985-1995"))+
+    geom_line(data=df_all_se,aes(x=names,y=second,group=1,color="1996-2006"))+
+    geom_line(data=df_all_se,aes(x=names,y=third,group=1,color="2007-2018"))+coord_radar()+
+    geom_line(data=df_extraline_sec,aes(x=names,y=first,group=1,color="1985-1995"))+
+    geom_line(data=df_extraline_sec,aes(x=names,y=second,group=1,color="1996-2006"))+
+    geom_line(data=df_extraline_sec,aes(x=names,y=third,group=1,color="2007-2018"))+ggtitle("Rader Chart Of NBA Stars In Different Time Periods")+
+theme(plot.title = element_text(color="BLACK", size=12, face="bold",hjust = 0.5), axis.title.x = element_text(color="BLACK", size=15),
+axis.title.y = element_text(color="BLACK", size=15),axis.ticks.y = element_blank(),
+        axis.text.y = element_blank())+labs(y="",x="")
+
+```
+
+<br>
+In this radar chart, we focus on steal, turnover, rebound and assist. First, most recent NBA stars do not have many steals and turnovers, and the reason might be NBA is not as aggressive as before or that NBA stars now focus more on offense not defense. We can also get similar speculation from "assist" and "rebound". Most recent NBA stars have more assists and less rebounds than before, and we imply that they becomes more important in offense and make less efforts in defense.
+
+<br>
+
+####All Players: 
+
+```{r,fig.height=5, fig.width=10}
+person_avg <- data_select %>% dplyr::filter(!is.na(height) & !is.na(weight)) %>%
+                          select(Year,height,weight) %>% 
+                          group_by(Year) %>%
+                          summarise(height_mean = mean(height), weight_mean = mean(weight))
+person_avg$Year <- factor(person_avg$Year)
+person_avg[,2:3] <- data.frame(lapply(person_avg[,2:3], function(x) scale(x, center = FALSE, scale = min(x, na.rm = TRUE)/100)))
+person_avg <- melt(data = person_avg, id.vars = "Year", measure.vars = c("height_mean", "weight_mean"))
+
+
+ggplot(person_avg) + 
+  geom_line(aes(x = Year, y = value, group = variable, color = variable)) + 
+  geom_smooth(aes(x = Year, y = value, group = variable, color = variable),method = "loess", se = FALSE) +
+  labs(title="1985-2018 Average Height and Weight", 
+        x="Year", 
+        y="Value") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(axis.text.x = element_text(vjust = 0.5, hjust = 0.5, angle = 45)) +
+    theme(axis.text.y = element_text(vjust = 0.5, hjust = 0.5))
+
+```
+
+```{r fig.height=5, fig.width=10}
+data_position_year <- data_select %>% dplyr::filter(!is.na(height) & !is.na(weight)) %>%
+                                      dplyr::filter(Position %in% c("C","PF","SF","SG","PG")) %>%
+                                      group_by(Year,Position) %>%
+                                      summarise(height_mean = mean(height), weight_mean = mean(weight))
+library(ggplot2)
+ggplot(data_position_year) +
+  geom_line(aes(x = Year, y = height_mean, group = Position, color = Position)) +
+  geom_smooth(aes(x = Year, y = height_mean, group = Position, color = Position),method = "loess", se = FALSE) +
+  labs(title="1985-2018 Height Data By Position", 
+        x="Year", 
+        y="Height") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(axis.text.x = element_text(vjust = 0.5, hjust = 0.5, angle = 45)) +
+    theme(axis.text.y = element_text(vjust = 0.5, hjust = 0.5))
+
+ggplot(data_position_year) +
+  geom_line(aes(x = Year, y = weight_mean, group = Position, color = Position)) +
+  geom_smooth(aes(x = Year, y = weight_mean, group = Position, color = Position),method = "loess", se = FALSE) +
+  labs(title="1985-2018 Weight Data By Position", 
+        x="Year", 
+        y="Height") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(axis.text.x = element_text(vjust = 0.5, hjust = 0.5, angle = 45)) +
+    theme(axis.text.y = element_text(vjust = 0.5, hjust = 0.5))
+```
+
+<br>
+Now we focus on players' height and weight. Here we include all players, not just starts. We rescale the height and weight data and discover that as time goes, the demand for height in NBA is approximately the same, while the demand for weight is increasing and reaches the peak in 2010. After 2010, the average weight of NBA players declines. Actually, before 2010, NBA accentuates more on the role of Centre and inner body confrontation. There was an old saying that Centre wins the world. But situation has changed since 2010 because small lineup is becoming popular and the importance of 3-point goal is rising. The tendency revealed in the above chart coincides with the tendency in the real world.
+
+<br>
+
+```{r}
+library(tidyverse)
+library(choroplethr)
+library(ggplot2)
+library(dplyr)
+state_data_all <- data_select %>% group_by(birth_state) %>%
+                                summarise(value = n())
+
+lc_first <- inline::rcpp(signature(x="std::vector < std::string >"), '
+  std::vector < std::string > s = as< std::vector < std::string > >(x);
+  unsigned int input_size = s.size();
+  for (unsigned int i=0; i<input_size; i++) s[i][0] = tolower(s[i][0]);
+  return(wrap(s));
+', includes = c("#include <string>", "#include <cctype>"))
+
+state_data_all <- state_data_all %>% mutate(region = lc_first(as.character(birth_state))) %>%
+                             select(region, value)
+
+df_illiteracy <- state.x77 %>% as.data.frame() %>% 
+  rownames_to_column("state") %>% 
+  transmute(region = tolower(`state`), value = Illiteracy)
+
+state_data_all <- left_join(df_illiteracy, state_data_all, by = c("region" = "region")) %>%
+              select(region, value.y)
+names(state_data_all) <- c("region", "value")
+state_data_all[is.na(state_data_all)] <- 0
+
+state_choropleth(state_data_all,
+                 title = "Birth State of USA NBA Players All Through History",
+                 legend = "Number")
+```
+
+```{r}
+state_data_history <- data_select %>% filter(Year %in% c("1985", "1986", "1987","1988","1989","1990", "1991","1992","1993", "1994","1995")) %>% 
+                                group_by(birth_state) %>%
+                                summarise(value = n())
+state_data_history <- state_data_history %>% mutate(region = lc_first(as.character(birth_state))) %>%
+                             select(region, value)
+
+df_illiteracy <- state.x77 %>% as.data.frame() %>% 
+  rownames_to_column("state") %>% 
+  transmute(region = tolower(`state`), value = Illiteracy)
+
+state_data_history <- left_join(df_illiteracy, state_data_history, by = c("region" = "region")) %>%
+              select(region, value.y)
+names(state_data_history) <- c("region", "value")
+state_data_history[is.na(state_data_history)] <- 0
+
+state_choropleth(state_data_history,
+                 title = "Birth State of USA NBA Players in 1985-1995",
+                 legend = "Number")
+```
+
+```{r}
+state_data_present <- data_select %>% filter(Year %in% c("2008","2009", "2010", "2011","2012","2013","2014","2015","2016","2017","2018")) %>% 
+                                group_by(birth_state) %>%
+                                summarise(value = n())
+state_data_present <- state_data_present %>% mutate(region = lc_first(as.character(birth_state))) %>%
+                             select(region, value)
+
+df_illiteracy <- state.x77 %>% as.data.frame() %>% 
+  rownames_to_column("state") %>% 
+  transmute(region = tolower(`state`), value = Illiteracy)
+
+state_data_present <- left_join(df_illiteracy, state_data_present, by = c("region" = "region")) %>%
+              select(region, value.y)
+names(state_data_present) <- c("region", "value")
+state_data_present[is.na(state_data_present)] <- 0
+
+state_choropleth(state_data_present,
+                 title = "Birth State of USA NBA Players in 2008-2018",
+                 legend = "Number")
+```
+
+<br>
+All through history, for the birth state of NBA American players, California, Texas, Michigan, Illinois, Pennsylvania, Georgia and Florida dominate. While in history, from 1985 to 1995, NBA favors Louisiana and Ohio more and Texas less. At present from 2008 to 2018, players from Louisiana are more welcomed and there is a decreasing number of NBA native players from Georgia. A funny phenomenon worth to mention is that players from Louisiana dominate both in the history period and at present, while if we look all through history, players from Louisiana are not as popular as those from dominant states. Maybe during the period from 1995 to 2008 that is not taken into account, players from Louisiana are a lot less.<br>
+
+##Interactive Component:
+<br>
+Link: https://peterpan001.shinyapps.io/edav_final_project/<br>
+
+If this link does not work, you may try the following commands in R concole:<br>
+library(rsconnect)<br>
+setAccountInfo(name='peterpan001', token='0C983274D9AA1E58C0DDFEFAB087AF87', secret='8DASbL2Zs4pXFGX4b40i2BbQYmr/Zi/RkylhWgIp')<br>
+deployApp()
+
+If it still does not work, you may have to run it locally by trying the following commands in R concole:<br>
+library(shiny)<br>
+runApp()<br>
+
+It should be working!!!<br>
+
+##Conclusion:
+<br>
+In this project, we try to figure out the evolution of NBA players. We find that although that number of points NBA stars scored did not change too much during last 30 years, the way of scoring did change a lot. NBA stars tends to shoot more behind 3 point line now than before, and 3 point has become a very important tool for NBA stars. In the past, NBA stars did not shoot many 3 point. We also notice that NBA stars get fewer free throws and personal fouls, that might be due to that more shootings behind the 3 point line makes less likely for NBA stars to get fouled. We also find that NBA stars focus more on offense now, rather than defense, because they have fewer turnovers and rebounds. NBA stars now play fewer minutes than before, and we can tell that NBA now cares more about players’ health condition. With all we find above, we conclude that NBA is not as aggressive as before and NBA players are better protected now.
+
+In this project, we learn how to handle very big data set, and especially how to group data. Moreover, we learn a lot about Shinny. As for limitation, we believe that our dataset is not large enough, it would be better if we could include data before 1985. In the future, we want to get more detailed data of players’ shooting locations on courts, thus we could analyze the change of shooting preference about location on courts overtime. 

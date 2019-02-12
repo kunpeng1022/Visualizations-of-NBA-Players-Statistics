@@ -1,0 +1,253 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(ggplot2)
+df<-read.csv("Seasons_Stats.csv")
+
+df<-df[!(df$Year == "1999"|df$Year == "2012"), ]
+
+df_star<-data.frame()
+
+```
+
+```{r}
+
+for (i in 1985:1998){
+    dftest<-subset(df,Year==i)
+    dftest<-dftest[order(-dftest$PTS),]
+    dftest <- dftest[0:30,]
+    df_star=rbind(df_star,dftest)
+}
+
+for (i in 2000:2011){
+    dftest<-subset(df,Year==i)
+    dftest<-dftest[order(-dftest$PTS),]
+    dftest <- dftest[0:30,]
+    df_star=rbind(df_star,dftest)
+}
+
+for (i in 2013:2017){
+    dftest<-subset(df,Year==i)
+    dftest<-dftest[order(-dftest$PTS),]
+    dftest <- dftest[0:30,]
+    df_star=rbind(df_star,dftest)
+}
+```
+
+```{r,fig.width=6}
+df_star$Year=factor(df_star$Year)
+df_star[which(df_star$Pos == 'SG-SF'),]$Pos="SG"
+df_star[which(df_star$Pos == 'SG-PG'),]$Pos="SG"
+df_star[which(df_star$Pos == 'SG-PF'),]$Pos="SG"
+df_star[which(df_star$Pos == 'SF-SG'),]$Pos="SF"
+
+
+
+```
+```{r,fig.width=6}
+ggplot(df_star)+ geom_point(aes(x=df_star$Year, y=df_star$PTS,alpha=0.5))
+```
+
+```{r,fig.width=6}
+df_ave_PTS <- aggregate(df_star[, c("PTS")], list(df_star$Year), mean)
+
+colnames(df_ave_PTS) <- c("Year","Average_PTS")
+
+
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$PTS,alpha=0.5))+
+  geom_line(data=df_ave_PTS,aes(x=Year,y=Average_PTS, group=1,color="hotpink1",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)
+
+```
+
+
+```{r,fig.width=6}
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$PTS,alpha=0.5,color="pts"))+
+  geom_smooth(data=df_ave_PTS,aes(x=Year,y=Average_PTS, group=1,color="hotpink1"),method = "loess", se = FALSE, lwd =1.5)
+
+```
+
+```{r,fig.width=6}
+ggplot(data=df_star,aes(x=Year,y=PTS,group=Year))+ geom_boxplot()+labs(title = "NBA Stars' Points Per Season", y = "Point", x = "Year")
+```
+
+
+```{r,fig.height=6}
+ggplot(df_star,aes(x=PTS))+facet_grid(Year~.)+geom_histogram(bins = 20)
+
+```
+
+```{r,fig.width=6}
+
+ggplot(df_ave_PTS,aes(x=Year,y=Average_PTS,group=1))+geom_line()
+
+```
+
+
+```{r}
+ggplot(df_star, aes(PTS,color =Year)) + geom_density()
+```
+
+3pt
+```{r,fig.width=6}
+ggplot(df_star,aes(x=df_star$Year, y=df_star$X3PA,color=Pos))+ geom_point()
+```
+
+```{r,fig.width=6}
+library(reshape2)
+
+df_ave_3_attempt <- aggregate(df_star[, c("X3PA","X3P")], list(df_star$Year), mean)
+
+colnames(df_ave_3_attempt) <- c("Year","Average_3Point_Attempt","Average_3Point_made")
+
+df2 <- melt(df_ave_3_attempt, id.vars='Year')
+
+ggplot(df2, aes(x=Year, y=value, fill=variable)) +
+    geom_bar(stat='identity', position='dodge')
+```
+
+
+
+position:
+
+
+```{r, fig.width=6}
+
+ggplot(data = df_star, aes(x = Year, fill = Pos)) + geom_bar()
+```
+
+3-Point Attempt Rate and 3 made 
+```{r,fig.width=6}
+ggplot(df_star)+ geom_point(aes(x=df_star$Year, y=df_star$X3PAr, alpha=0.3))
+ggplot(df_star)+ geom_point(aes(x=df_star$Year, y=df_star$X3P, alpha=0.3))
+
+```
+
+
+
+
+
+minitus 
+```{r,fig.width=6}
+
+df_ave_min <- aggregate(df_star[, c("MP")], list(df_star$Year), mean)
+
+colnames(df_ave_min) <- c("Year","Average_mints")
+
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$MP/82, alpha=0.4,color="royalblue3"))+
+  geom_line(data=df_ave_min,aes(x=Year,y=Average_mints/82,group=1,color="hotpink1",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)
+
+```
+
+```{r,fig.width=6}
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$MP/82, alpha=0.4,color="royalblue3"))+
+  geom_smooth(data=df_ave_min,aes(x=Year,y=Average_mints/82, group=1,color="hotpink1"),method = "loess", se = FALSE, lwd =1.5)
+```
+
+FG attempt:
+```{r,fig.width=6}
+df_ave_FGA <- aggregate(df_star[, c("FGA")], list(df_star$Year), mean)
+
+colnames(df_ave_FGA) <- c("Year","Average_FGA")
+
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$FGA, alpha=0.4,color="royalblue3"))+
+  geom_smooth(data=df_ave_FGA,aes(x=Year,y=Average_FGA, group=1,color="hotpink1"),method = "loess", se = FALSE, lwd =1.5)
+```
+
+Free thorw:
+```{r,fig.width=6}
+
+df_ave_FTA <- aggregate(df_star[, c("FTA")], list(df_star$Year), mean)
+
+colnames(df_ave_FTA) <- c("Year","Average_FTA")
+
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$FTA, alpha=0.4,color="royalblue3"))+
+  geom_smooth(data=df_ave_FTA,aes(x=Year,y=Average_FTA, group=1,color="hotpink1"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_line(data=df_ave_FTA,aes(x=Year,y=Average_FTA,group=1,color="hotpink1",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)
+
+```
+
+Personal Foul:
+```{r,fig.width=6}
+df_ave_PF <- aggregate(df_star[, c("PF")], list(df_star$Year), mean)
+
+colnames(df_ave_PF) <- c("Year","Average_PF")
+
+ggplot()+ geom_point(data=df_star,aes(x=df_star$Year, y=df_star$PF, alpha=0.4,color="royalblue3"))+
+  geom_smooth(data=df_ave_PF,aes(x=Year,y=Average_PF, group=1,color="hotpink1"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_line(data=df_ave_PF,aes(x=Year,y=Average_PF,group=1,color="hotpink1",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)
+```
+
+different position:
+```{r,fig.width=6}
+df_center<-subset(df_star,Pos=="C")
+df_PG<-subset(df_star,Pos=="PG")
+
+ggplot()+ geom_point(data=df_center,aes(x=Year, y=WS, alpha=0.4,color="royalblue3"))
+ggplot()+ geom_point(data=df_star,aes(x=Year, y=WS, alpha=0.4,color=Pos))
+```
+winning share
+```{r}
+df_center<-subset(df_star,Pos=="C")
+df_ave_WS_center <- aggregate(df_center[, c("WS")], list(df_center$Year), mean)
+colnames(df_ave_WS_center) <- c("Year","WS")
+
+ggplot()+geom_point(data=df_ave_WS_center,aes(x=Year, y=WS, alpha=0.4))
+
+```
+
+
+```{r,fig.width=6}
+df_center<-subset(df_star,Pos=="C")
+df_ave_WS_center <- aggregate(df_center[, c("WS")], list(df_center$Year), sum)
+colnames(df_ave_WS_center) <- c("Year","WS")
+
+df_PG<-subset(df_star,Pos=="PG")
+df_ave_WS_PG <- aggregate(df_PG[, c("WS")], list(df_PG$Year), sum)
+colnames(df_ave_WS_PG) <- c("Year","WS")
+
+df_PF<-subset(df_star,Pos=="PF")
+df_ave_WS_PF <- aggregate(df_PF[, c("WS")], list(df_PF$Year), sum)
+colnames(df_ave_WS_PF) <- c("Year","WS")
+
+df_SF<-subset(df_star,Pos=="SF")
+df_ave_WS_SF <- aggregate(df_SF[, c("WS")], list(df_SF$Year), sum)
+colnames(df_ave_WS_SF) <- c("Year","WS")
+
+df_SG<-subset(df_star,Pos=="SG")
+df_ave_WS_SG <- aggregate(df_SG[, c("WS")], list(df_SG$Year), sum)
+colnames(df_ave_WS_SG) <- c("Year","WS")
+
+
+ggplot()+
+  geom_smooth(data=df_ave_WS_center,aes(x=Year,y=WS, group=1,color="center"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_WS_PG,aes(x=Year,y=WS, group=1,color="PG"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_WS_PF,aes(x=Year,y=WS, group=1,color="PF"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_WS_SF,aes(x=Year,y=WS, group=1,color="SF"),method = "loess", se = FALSE, lwd =1.5)+
+  geom_smooth(data=df_ave_WS_SG,aes(x=Year,y=WS, group=1,color="SG"),method = "loess", se = FALSE, lwd =1.5)
+
+
+
+
+ggplot()+
+  geom_line(data=df_ave_WS_center,aes(x=Year,y=WS,group=1,color="center",size=1))+scale_size(range=c(0.5, 2), guide=FALSE)+
+  geom_line(data=df_ave_WS_PG,aes(x=Year,y=WS,group=1,color="PG",size=1))+
+  geom_line(data=df_ave_WS_PF,aes(x=Year,y=WS,group=1,color="PF",size=1))+
+  geom_line(data=df_ave_WS_SF,aes(x=Year,y=WS,group=1,color="SF",size=1))+
+  geom_line(data=df_ave_WS_SG,aes(x=Year,y=WS,group=1,color="SG",size=1))
+
+
+
+
+
+
+
+```
+

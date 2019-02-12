@@ -1,0 +1,64 @@
+---
+title: "Project"
+output: html_document
+---
+
+
+```{r}
+df<-read.csv("Seasons_Stats.csv")
+df <- subset(df,Year==2017|Year==2014|Year==2007|Year==2002|Year==1997|Year==1992)
+require(dplyr)
+library(ggplot2)
+
+
+```
+
+```{r}
+df1992<-subset(df,Year==1992)
+df1992<-df1992[order(-df1992$PTS),]
+df1992 <- df1992[0:30,]
+
+df1997<-subset(df,Year==1997)
+df1997<-df1997[order(-df1997$PTS),]
+df1997 <- df1997[0:30,]
+
+df2002<-subset(df,Year==2002)
+df2002<-df2002[order(-df2002$PTS),]
+df2002 <- df2002[0:30,]
+
+df2007<-subset(df,Year==2007)
+df2007<-df2007[order(-df2007$PTS),]
+df2007 <- df2007[0:30,]
+
+df2014<-subset(df,Year==2014)
+df2014<-df2014[order(-df2014$PTS),]
+df2014 <- df2014[0:30,]
+
+df2017<-subset(df,Year==2017)
+df2017<-df2017[order(-df2017$PTS),]
+df2017 <- df2017[0:30,]
+```
+```{r}
+
+```
+
+```{r}
+df_star <- rbind(df1992, df1997,df2002,df2007,df2014,df2017)
+df_star$Year<-factor(df_star$Year)
+ggplot(df_star)+ geom_point(aes(x=df_star$Year, y=df_star$PTS))
+```
+
+```{r,}
+ggplot(df_star,aes(x=PTS))+facet_grid(Year~.)+geom_histogram(bins = 20)
+```
+
+```{r}
+df_ave_PTS <- aggregate(df_star[, "PTS"], list(df_star$Year), mean)
+
+colnames(df_ave_PTS) <- c("Year","Average_PTS")
+
+ggplot(df_ave_PTS,aes(x=Year,y=Average_PTS,group=1))+geom_line()
+df_ave_PTS
+
+```
+
